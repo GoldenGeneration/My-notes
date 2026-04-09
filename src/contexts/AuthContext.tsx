@@ -14,14 +14,33 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 async function ensureProfile(user: User) {
-  const { data } = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
-  if (data) return;
+  try {
+    const { data, error: selectError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
 
-  const metaName = user.user_metadata?.full_name;
-  const displayName =
-    (typeof metaName === 'string' && metaName.trim()) || user.email?.split('@')[0] || 'Writer';
+    if (selectError) {
+      console.error('ensureProfile: failed to read profile', selectError);
+      return;
+    }
+    if (data) return;
 
-  await supabase.from('profiles').insert({ id: user.id, display_name: displayName });
+    const metaName = user.user_metadata?.full_name;
+    const displayName =
+      (typeof metaName === 'string' && metaName.trim()) || user.email?.split('@')[0] || 'Writer';
+
+    const { error: insertError } = await supabase
+      .from('profiles')
+      .insert({ id: user.id, display_name: displayName });
+
+    if (insertError) {
+      console.error('ensureProfile: failed to insert profile', insertError);
+    }
+  } catch (err) {
+    console.error('ensureProfile: unexpected error', err);
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
