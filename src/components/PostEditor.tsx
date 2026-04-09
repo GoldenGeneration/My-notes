@@ -29,13 +29,20 @@ export default function PostEditor() {
       navigate(`/login?redirect=${encodeURIComponent(path)}`, { replace: true });
       return;
     }
-    if (isEditing && id) {
-      fetchPost();
+    setForbidden(false);
+    if (!isEditing) {
+      setInitialLoading(false);
+      return;
+    }
+    if (id) {
+      setInitialLoading(true);
+      void fetchPost();
     }
   }, [id, isEditing, user, authLoading, navigate]);
 
   async function fetchPost() {
     if (!id || !user) return;
+    setForbidden(false);
     try {
       const { data, error } = await supabase
         .from('blog_posts')
@@ -53,6 +60,7 @@ export default function PostEditor() {
         setInitialLoading(false);
         return;
       }
+      setForbidden(false);
       setFormData({
         title: data.title,
         content: data.content,
